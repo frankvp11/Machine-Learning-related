@@ -4,7 +4,10 @@ import random
 from enum import Enum
 from collections import namedtuple
 import time
+import numpy as np
 
+
+#TODO 1 - Make Chaser actually chase - use x and y positions and create actually collision - within BLOCKSIZES
 
 pygame.init()
 font = pygame.font.Font('arial.ttf', 25)
@@ -27,7 +30,7 @@ BLACK = (0,0,0)
 BLOCK_SIZE = 20
 SPEED = 10
 
-class SnakeGame:
+class newGame:
     
     def __init__(self, w=640, h=480):
         self.w = w
@@ -46,6 +49,8 @@ class SnakeGame:
         self.score = 0
         self.food = None
         self._place_food()
+        self.do_x = False
+        self.do_y = False
 
 
     def create_Chaser(self):
@@ -58,8 +63,7 @@ class SnakeGame:
         x = random.randint(0, (self.w-BLOCK_SIZE )//BLOCK_SIZE )*BLOCK_SIZE 
         y = random.randint(0, (self.h-BLOCK_SIZE )//BLOCK_SIZE )*BLOCK_SIZE
         self.food = Point(x, y)
-        if self.food.x == self.player.x or self.food.y == self.player.y:
-            self._place_food()
+        
         
     def play_step(self):
         # 1. collect user input
@@ -80,14 +84,15 @@ class SnakeGame:
         # 2. move
         self._move(self.direction) # update the head
         self._move_chaser()
-        
+        game_over = False
         # 3. check if game over
         if self._is_collision():
-            time.sleep(1)
-            self.reset()
-            print("Games over: Your score was: " + str(self.score))
+            game_over = True
+            return game_over
                     
-        
+        if self.player == self.food:
+            self.score += 1
+            self._place_food()
         # 5. update ui and clock
         self._update_ui()
         self.clock.tick(SPEED)
@@ -115,6 +120,7 @@ class SnakeGame:
         self.display.blit(text, [0, 0])
         pygame.display.flip()
         
+
     def _move(self, direction):
         x = self.player.x
         y = self.player.y
@@ -132,42 +138,57 @@ class SnakeGame:
 
     
     def _move_chaser(self):
-        if self.is_valid_chaser():
-            directions = [Direction.RIGHT, Direction.LEFT, Direction.UP, Direction.DOWN]
-            new_dir = random.choice(directions)
-            x =  self.chaser.x
-            y = self.chaser.y
-            if new_dir == Direction.RIGHT:
-                x += BLOCK_SIZE
-            elif new_dir == Direction.LEFT:
-                x -= BLOCK_SIZE
-            elif new_dir == Direction.DOWN:
-                y += BLOCK_SIZE
-            elif new_dir == Direction.UP:
-                y -= BLOCK_SIZE
+        x = self.chaser.x
+        direction = 0
+        y = self.chaser.y
+        if np.abs(self.chaser.x - self.player.x) > np.abs(self.chaser.y - self.player.y):
+            self.do_x = True
+        elif np.abs(self.chaser.y - self.player.y) > np.abs(self.chaser.x - self.player.x):
+            self.do_y = True
+        if self.do_x: 
+            if self.chaser.x - self.player.x < 0:
+                direction = 1 # right
+            else:
+                direction = 2 #left 
+        if self.do_y:
+            if self.chaser.y - self.player.y < 0:
+                direction = 3 #up
+            else:
+                direction = 4 #down
+        
+        if direction == 1:
+            x += 10
+        elif direction == 2:
+            x -= 10
+        elif direction == 3:
+            y += 10
+        else:
+            y -= 10
+        
+
+
+        self.chaser = Point(x, y)
             
-            self.chaser = Point(x, y)
-            
 
 
-
-    def is_valid_chaser(self):
-        if self.chaser.x > self.w - BLOCK_SIZE or self.chaser.x < 0 or self.chaser.y > self.h - BLOCK_SIZE or self.chaser.y < 0:
-            return False
-        # hits itself
-        return True
 
     def chaser_hits(self):
-        if self.chaser.x == self.player.x and self.chaser.y == self.player.y:
+        if np.abs(self.chaser.x - self.player.x) == BLOCK_SIZE and np.abs(self.chaser.y - self.player.y) == BLOCK_SIZE:
+            print("Chaser hit")
             return True
 
 if __name__ == '__main__':
-    game = SnakeGame()
-    i = 0
+    game = newGame()
+    
     # game loop
-    while i< 1000000000:
-        game.play_step()
+    while True:
+        time.sleep(0.3)
+        game_over = game.play_step()
         
-        i += 1
+        if game_over == True:
+            break
+        
+    print('Final Score', game.score)
+        
         
     pygame.quit()
